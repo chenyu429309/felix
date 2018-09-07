@@ -1,0 +1,118 @@
+安装nginx
+
+1.选定源码目录
+
+可以是任何目录，本文选定的是/usr/local/src
+
+cd /usr/local/src
+2.安装PCRE库
+
+ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/ 下载最新的 PCRE 源码包，使用下面命令下载编译和安装 PCRE 包：（最好使用root用户进行安装）
+
+cd /usr/local/src
+wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.38.tar.gz
+tar -zxvf pcre-8.38.tar.gz
+cd pcre-8.38
+./configure
+make
+make install
+3.安装zlib库
+http://zlib.net/zlib-1.2.8.tar.gz 下载最新的 zlib 源码包，使用下面命令下载编译和安装 zlib包：
+
+cd /usr/local/src
+
+wget http://zlib.net/zlib-1.2.8.tar.gz
+tar -zxvf zlib-1.2.8.tar.gz
+cd zlib-1.2.8
+./configure
+make
+make install
+4.安装openssl
+cd /usr/local/src
+wget http://www.openssl.org/source/openssl-1.0.2p.tar.gz
+tar -zxvf openssl-1.0.2p.tar.gz
+cd openssl-1.0.2p
+./config(注意) && make && make install
+5.安装nginx
+cd /usr/local/src
+wget http://nginx.org/download/nginx-1.13.11.tar.gz
+tar -zxvf nginx-1.13.11.tar.gz
+cd nginx-1.13.11
+
+./configure --sbin-path=/usr/local/nginx/nginx \
+--conf-path=/usr/local/nginx/nginx.conf \
+--pid-path=/usr/local/nginx/nginx.pid \
+--with-http_ssl_module \
+--with-pcre=/usr/local/src/pcre-8.38 \
+--with-zlib=/usr/local/src/zlib-1.2.11 \
+--with-openssl=/usr/local/src/openssl-1.0.2p
+
+make
+make install
+--with-pcre=/usr/src/pcre-8.35 指的是pcre-8.35 的源码路径
+--with-zlib=/usr/src/zlib-1.2.8 指的是zlib-1.2.8 的源码路径
+--with-openssl=/usr/local/src/openssl-1.2.1 指的是openssl的源码路径
+6. 启动Nginx
+
+
+/usr/local/nginx/nginx #不指定配置文件地址
+/usr/local/nginx/nginx -c /usr/local/nginx/nginx.conf #指定配置文件地址
+ ./configure --prefix=/usr/servers --with-http_realip_module --with-pcre --with-luajit --add-module=./bundle/ngx_cache_purge-2.3/ --add-module=./bundle/nginx_upstream_check_module-0.3.0/ -j2 --with-openssl=/usr/local/src/openssl-1.0.2p --with-http_postgres_module --with-http_gzip_static_module --with-http_realip_module --with-http_addition_module --with-http_sub_module --with-http_v2_module --with-http_gzip_static_module --with-http_realip_module --with-http_addition_module --with-http_sub_module --with-http_v2_module --with-http_postgres_module
+
+
+
+local function close_redis(red)
+    if not red then
+        return
+    end
+
+    local pool_max_idle_time = 10000 --毫秒
+    local pool_size = 100 --连接池大小
+    local ok, err = red:set_keepalive(pool_max_idle_time, pool_size)
+    if not ok then
+        ngx.say("set keepalive error : ", err)
+    end
+end
+
+local redis = require("resty.redis")
+
+
+local red = redis:new()
+
+red:set_timeout(1000)
+
+local ip = "192.168.0.3"
+local port = 9999
+local ok, err = red:connect(ip, port)
+if not ok then
+    ngx.say("connect to redis error : ", err)
+    return close_redis(red)
+end
+local res, err = red:auth("thisisredis")
+    if not res then
+        ngx.say("failed to authenticate: ", err)
+        return
+    end
+red:select(2)
+ok, err = red:set("msg", "hello world")
+if not ok then
+    ngx.say("set msg error : ", err)
+    return close_redis(red)
+end
+local resp, err = red:get("msg")
+if not resp then
+    ngx.say("get msg error : ", err)
+    return close_redis(red)
+end
+
+if resp == ngx.null then
+    resp = ''
+end
+ngx.say("msg : ", resp)
+
+close_redis(red)
+
+
+
+
+wget http://files.luaforge.net/releases/json/json/0.9.50/json4lua-0.9.50.zip
